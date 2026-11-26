@@ -44,4 +44,15 @@ public class Equipment {
         this.borrowerLastName = lastName;
         this.borrowedAt = date;
     }
+
+    public void giveBack(LocalDate date) {
+        if (available) {
+            throw new EquipmentStateException("Equipment %d is not borrowed".formatted(id));
+        }
+        this.available = true;
+        this.borrowerFirstName = null;
+        this.borrowerLastName = null;
+        this.borrowedAt = null;
+        this.lastReturnedAt = date;
+    }
 }

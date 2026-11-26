@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class EquipmentServiceTest {
@@ -54,7 +53,8 @@ class EquipmentServiceTest {
     void borrowEquipment_whenPreviouslyReturned_keepsLastReturnedAtUnchanged() {
         Equipment equipment = new Equipment("Laptop", "Computer");
         LocalDate previousReturn = LocalDate.of(2026, 1, 15);
-        ReflectionTestUtils.setField(equipment, "lastReturnedAt", previousReturn);
+        equipment.borrow("Old", "Borrower", LocalDate.of(2026, 1, 1));
+        equipment.giveBack(previousReturn);
         when(repository.findById(1L)).thenReturn(Optional.of(equipment));
         when(repository.save(equipment)).thenReturn(equipment);
 
@@ -84,6 +84,47 @@ class EquipmentServiceTest {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> equipmentService.borrowEquipment(99L, "Ada", "Lovelace"))
+                .isInstanceOf(EquipmentNotFoundException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void returnEquipment_whenBorrowed_marksAsAvailableClearsBorrowerAndSaves() {
+        Equipment equipment = new Equipment("Laptop", "Computer");
+        equipment.borrow("Ada", "Lovelace", LocalDate.of(2026, 11, 1));
+        when(repository.findById(1L)).thenReturn(Optional.of(equipment));
+        when(repository.save(equipment)).thenReturn(equipment);
+
+        Equipment result = equipmentService.returnEquipment(1L);
+
+        assertThat(result).isSameAs(equipment);
+        assertThat(result.isAvailable()).isTrue();
+        assertThat(result.getBorrowerFirstName()).isNull();
+        assertThat(result.getBorrowerLastName()).isNull();
+        assertThat(result.getBorrowedAt()).isNull();
+        assertThat(result.getLastReturnedAt()).isEqualTo(TODAY);
+        verify(repository).save(equipment);
+    }
+
+    @Test
+    void returnEquipment_whenAlreadyAvailable_throwsAndDoesNotSave() {
+        Equipment equipment = new Equipment("Laptop", "Computer");
+        when(repository.findById(1L)).thenReturn(Optional.of(equipment));
+
+        assertThatThrownBy(() -> equipmentService.returnEquipment(1L))
+                .isInstanceOf(EquipmentStateException.class);
+
+        assertThat(equipment.isAvailable()).isTrue();
+        assertThat(equipment.getLastReturnedAt()).isNull();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void returnEquipment_whenNotFound_throwsAndDoesNotSave() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> equipmentService.returnEquipment(99L))
                 .isInstanceOf(EquipmentNotFoundException.class);
 
         verify(repository, never()).save(any());

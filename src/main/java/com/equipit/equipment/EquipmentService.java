@@ -28,7 +28,11 @@ public class EquipmentService {
         return repository.save(equipment);
     }
 
+    @Transactional
     public Equipment returnEquipment(Long id) {
-        throw new UnsupportedOperationException("Exercise 1: implement equipment return");
+        Equipment equipment = repository.findById(id)
+                .orElseThrow(() -> new EquipmentNotFoundException(id));
+        equipment.giveBack(LocalDate.now(clock));
+        return repository.save(equipment);
     }
 }
