@@ -34,4 +34,14 @@ public class Equipment {
     public String getBorrowerLastName() { return borrowerLastName; }
     public LocalDate getBorrowedAt() { return borrowedAt; }
     public LocalDate getLastReturnedAt() { return lastReturnedAt; }
+
+    public void borrow(String firstName, String lastName, LocalDate date) {
+        if (!available) {
+            throw new EquipmentStateException("Equipment %d is already borrowed".formatted(id));
+        }
+        this.available = false;
+        this.borrowerFirstName = firstName;
+        this.borrowerLastName = lastName;
+        this.borrowedAt = date;
+    }
 }
